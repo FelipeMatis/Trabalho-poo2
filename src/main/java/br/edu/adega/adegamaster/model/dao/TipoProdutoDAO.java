@@ -1,8 +1,8 @@
-package br.edu.adega.adegamaster.model.dao;
+package br.edu.adega.adegamaster.dao;
 
-import br.edu.adega.adegamaster.model.domain.TipoProduto;
+import br.edu.adega.adegamaster.domain.TipoProduto;
 import java.sql.Connection;
-import java.sql.PreparedStatement; // Requisito: 5.a - Prepared Statements
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -10,89 +10,70 @@ import java.util.List;
 
 public class TipoProdutoDAO {
 
-    // Método 1: CREATE (Inserir) - Requisito: 3.a
-    public boolean inserir(TipoProduto tipo) {
-        String sql = "INSERT INTO TipoProduto(nome_tipo) VALUES(?)";
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        try {
-            conn = Conexao.getConnection();
-            stmt = conn.prepareStatement(sql);
-            stmt.setString(1, tipo.getNomeTipo()); // 1. O primeiro '?' é o nome
+    private Connection conexao;
+
+    public TipoProdutoDAO() {
+        this.conexao = Conexao.getConexao();
+    }
+
+    public void inserir(TipoProduto tipo) throws SQLException {
+        String sql = "INSERT INTO tipo_produto (nome) VALUES (?)";
+        try (PreparedStatement stmt = conexao.prepareStatement(sql)) {
+            stmt.setString(1, tipo.getNome());
             stmt.execute();
-            return true;
-        } catch (SQLException ex) {
-            // Tratamento de Exceção (Requisito: 5.b)
-            System.err.println("Erro ao inserir TipoProduto: " + ex.getMessage());
-            return false;
-        } finally {
-            Conexao.closeConnection(conn); // Fechar a conexão
         }
     }
 
-    // Método 2: READ (Listar/Consultar) - Requisito: 3.a
-    public List<TipoProduto> listar() {
-        String sql = "SELECT * FROM TipoProduto";
-        List<TipoProduto> retorno = new ArrayList<>();
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        ResultSet resultado = null;
-        try {
-            conn = Conexao.getConnection();
-            stmt = conn.prepareStatement(sql);
-            resultado = stmt.executeQuery();
-            while (resultado.next()) {
+    public void atualizar(TipoProduto tipo) throws SQLException {
+        String sql = "UPDATE tipo_produto SET nome=? WHERE id=?";
+        try (PreparedStatement stmt = conexao.prepareStatement(sql)) {
+            stmt.setString(1, tipo.getNome());
+            stmt.setInt(2, tipo.getId());
+            stmt.execute();
+        }
+    }
+
+    public void excluir(int id) throws SQLException {
+        String sql = "DELETE FROM tipo_produto WHERE id=?";
+        try (PreparedStatement stmt = conexao.prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            stmt.execute();
+        }
+    }
+
+    public List<TipoProduto> listarTodos() {
+        List<TipoProduto> tipos = new ArrayList<>();
+        String sql = "SELECT id, nome FROM tipo_produto ORDER BY nome";
+        try (PreparedStatement stmt = conexao.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
                 TipoProduto tipo = new TipoProduto();
-                tipo.setIdTipoProduto(resultado.getInt("id_tipo_produto"));
-                tipo.setNomeTipo(resultado.getString("nome_tipo"));
-                retorno.add(tipo);
+                tipo.setId(rs.getInt("id"));
+                tipo.setNome(rs.getString("nome"));
+                tipos.add(tipo);
             }
-        } catch (SQLException ex) {
-            System.err.println("Erro ao listar TipoProdutos: " + ex.getMessage());
-        } finally {
-            // Fechar recursos aqui
+        } catch (SQLException e) {
+            System.err.println("Erro ao listar tipos de produto: " + e.getMessage());
         }
-        return retorno;
+        return tipos;
     }
 
-
-    // Método 3: UPDATE (Alterar)
-    public boolean alterar(TipoProduto tipo) {
-        // Usa o ID para saber qual linha atualizar
-        String sql = "UPDATE TipoProduto SET nome_tipo=? WHERE id_tipo_produto=?";
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        try {
-            conn = Conexao.getConnection();
-            stmt = conn.prepareStatement(sql);
-            stmt.setString(1, tipo.getNomeTipo());       // 1. Novo nome
-            stmt.setInt(2, tipo.getIdTipoProduto());     // 2. ID para a cláusula WHERE
-            stmt.execute();
-            return true;
-        } catch (SQLException ex) {
-            System.err.println("Erro ao alterar TipoProduto: " + ex.getMessage());
-            return false;
-        } finally {
-            Conexao.closeConnection(conn);
+    public TipoProduto buscarPorId(int id) {
+        String sql = "SELECT id, nome FROM tipo_produto WHERE id=?";
+        try (PreparedStatement stmt = conexao.prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    TipoProduto tipo = new TipoProduto();
+                    tipo.setId(rs.getInt("id"));
+                    tipo.setNome(rs.getString("nome"));
+                    return tipo;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Erro ao buscar TipoProduto por ID: " + e.getMessage());
         }
-    }
-
-    // Método 4: DELETE (Excluir)
-    public boolean remover(TipoProduto tipo) {
-        String sql = "DELETE FROM TipoProduto WHERE id_tipo_produto=?";
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        try {
-            conn = Conexao.getConnection();
-            stmt = conn.prepareStatement(sql);
-            stmt.setInt(1, tipo.getIdTipoProduto()); // 1. ID para a cláusula WHERE
-            stmt.execute();
-            return true;
-        } catch (SQLException ex) {
-            System.err.println("Erro ao remover TipoProduto: " + ex.getMessage());
-            return false;
-        } finally {
-            Conexao.closeConnection(conn);
-        }
+        return null;
     }
 }

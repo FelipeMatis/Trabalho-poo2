@@ -1,0 +1,1 @@
+<TextField fx:id="txtBusca" promptText="Buscar por Nome ou Tipo..." />

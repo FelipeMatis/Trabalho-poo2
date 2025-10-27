@@ -1,41 +1,116 @@
 package br.edu.adega.adegamaster.controller;
 
-import br.edu.adega.adegamaster.MainApp;
-import java.io.IOException;
+import br.edu.adega.adegamaster.dao.ProdutoDAO;
+import br.edu.adega.adegamaster.dao.TipoProdutoDAO;
+import br.edu.adega.adegamaster.domain.Produto;
+import br.edu.adega.adegamaster.domain.TipoProduto;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Scene;
-import javafx.scene.layout.AnchorPane;
-import javafx.stage.Stage;
+import javafx.fxml.Initializable;
+import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
+import java.net.URL;
+import java.util.ResourceBundle;
 
-public class MainController {
+public class ProdutoController implements Initializable {
 
-    // Método para abrir a tela de Gerenciamento de Tipos de Produtos
-    @FXML
-    public void handleAbrirTipos() {
-        try {
-            // Cria um novo Stage (janela)
-            Stage stage = new Stage();
+    @FXML private TextField txtNome;
+    @FXML private TextField txtPreco;
+    @FXML private TextArea txtDescricao;
+    @FXML private ComboBox<TipoProduto> cbTipoProduto;
+    @FXML private TableView<Produto> tableProdutos;
+    @FXML private TableColumn<Produto, Integer> colId;
+    @FXML private TableColumn<Produto, String> colNome;
+    @FXML private TableColumn<Produto, Double> colPreco;
+    @FXML private TableColumn<Produto, TipoProduto> colTipo;
 
-            // Carrega o FXML do TipoProduto
-            FXMLLoader loader = new FXMLLoader(
-                    MainApp.class.getResource("/br/edu/adega/adegamaster/view/TipoProdutoView.fxml"));
-            AnchorPane root = loader.load();
+    private ProdutoDAO produtoDAO = new ProdutoDAO();
+    private TipoProdutoDAO tipoProdutoDAO = new TipoProdutoDAO();
 
-            Scene scene = new Scene(root);
-            stage.setScene(scene);
-            stage.setTitle("Gerenciar Tipos de Produtos");
-            stage.show();
-        } catch (IOException e) {
-            e.printStackTrace();
-            // Implementar tratamento de erro (ex: Alert) aqui.
+    private ObservableList<Produto> listaProdutos;
+    private ObservableList<TipoProduto> listaTipos;
+
+    @Override
+    public void initialize(URL url, ResourceBundle resourceBundle) {
+        colId.setCellValueFactory(new PropertyValueFactory<>("id"));
+        colNome.setCellValueFactory(new PropertyValueFactory<>("nome"));
+        colPreco.setCellValueFactory(new PropertyValueFactory<>("preco"));
+        colTipo.setCellValueFactory(new PropertyValueFactory<>("tipoProduto"));
+
+        carregarTabelaProdutos();
+        carregarComboBoxTipos();
+
+        tableProdutos.getSelectionModel().selectedItemProperty().addListener(
+                (observable, oldValue, newValue) -> preencherCampos(newValue));
+    }
+
+    private void carregarTabelaProdutos() {
+        listaProdutos = FXCollections.observableArrayList(produtoDAO.listarTodos());
+        tableProdutos.setItems(listaProdutos);
+    }
+
+    private void carregarComboBoxTipos() {
+        listaTipos = FXCollections.observableArrayList(tipoProdutoDAO.listarTodos());
+        cbTipoProduto.setItems(listaTipos);
+    }
+
+    private void preencherCampos(Produto produto) {
+        if (produto != null) {
+            txtNome.setText(produto.getNome());
+            txtPreco.setText(String.valueOf(produto.getPreco()));
+            txtDescricao.setText(produto.getDescricao());
+            cbTipoProduto.getSelectionModel().select(produto.getTipoProduto());
+        } else {
+            limparCampos();
         }
     }
 
-    // Método para abrir a tela de Gerenciamento de Produtos (a ser implementado)
+    private void limparCampos() {
+        txtNome.clear();
+        txtPreco.clear();
+        txtDescricao.clear();
+        cbTipoProduto.getSelectionModel().clearSelection();
+    }
+
     @FXML
-    public void handleAbrirProdutos() {
-        // Implemente a mesma lógica do handleAbrirTipos, mas carregando o ProdutoView.fxml
-        System.out.println("Abrir tela de Produtos...");
+    private void handleSalvar() {
+        Produto produto = new Produto();
+        produto.setNome(txtNome.getText());
+        produto.setPreco(Double.parseDouble(txtPreco.getText()));
+        produto.setDescricao(txtDescricao.getText());
+        produto.setTipoProduto(cbTipoProduto.getSelectionModel().getSelectedItem());
+
+        Produto selecionado = tableProdutos.getSelectionModel().getSelectedItem();
+        if (selecionado != null) {
+            produto.setId(selecionado.getId());
+            produtoDAO.atualizar(produto);
+        } else {
+            produtoDAO.inserir(produto);
+        }
+
+        carregarTabelaProdutos();
+        limparCampos();
+    }
+
+    @FXML
+    private void handleEditar() {
+        Produto selecionado = tableProdutos.getSelectionModel().getSelectedItem();
+        if (selecionado == null) {
+            System.out.println("Selecione um produto para editar.");
+            return;
+        }
+    }
+
+    @FXML
+    private void handleExcluir() {
+        Produto selecionado = tableProdutos.getSelectionModel().getSelectedItem();
+        if (selecionado != null) {
+            produtoDAO.excluir(selecionado.getId());
+            carregarTabelaProdutos();
+            limparCampos();
+        } else {
+            System.out.println("Selecione um produto para excluir.");
+        }
     }
 }
