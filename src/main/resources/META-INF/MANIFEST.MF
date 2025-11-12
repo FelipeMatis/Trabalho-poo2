@@ -1,0 +1,7 @@
+Manifest-Version: 1.0
+Main-Class: br.edu.adega.adegamaster.MainApp
+Class-Path: javafx-fxml-17.0.10-win.jar javafx-base-17.0.10.jar javafx-g
+ raphics-17.0.10.jar javafx-controls-17.0.10.jar postgresql-42.6.0.jar j
+ avafx-graphics-17.0.10-win.jar checker-qual-3.31.0.jar javafx-controls-
+ 17.0.10-win.jar javafx-base-17.0.10-win.jar
+
