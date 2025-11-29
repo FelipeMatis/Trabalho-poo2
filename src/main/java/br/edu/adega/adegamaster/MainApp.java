@@ -5,23 +5,22 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-import java.io.IOException;
 
 public class MainApp extends Application {
 
     @Override
-    public void start(Stage stage) throws IOException {
-        // Carrega uma view existente (ProdutoView.fxml) — você pode trocar para MainView.fxml se criar/popular esse arquivo
+    public void start(Stage stage) throws Exception {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/br/edu/adega/adegamaster/ProdutoView.fxml"));
-        Parent root = loader.load(); // Parent evita ClassCastException se o root não for VBox
-
+        Parent root = loader.load();
         Scene scene = new Scene(root);
         stage.setScene(scene);
-        stage.setTitle("Adega Master - CRUD MVC/DAO");
+        stage.setTitle("Adega Master - Produtos");
+        stage.setMinWidth(800);
+        stage.setMinHeight(600);
         stage.show();
     }
 
     public static void main(String[] args) {
-        launch();
+        launch(args);
     }
 }

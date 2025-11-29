@@ -1,143 +1,120 @@
 package br.edu.adega.adegamaster.model.dao;
 
-import br.edu.adega.adegamaster.model.domain.TipoProduto;
+import br.edu.adega.adegamaster.model.domain.Categoria;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class TipoProdutoDAO {
+public class CategoriaDAO {
 
-    /**
-     * Lista todos os tipos de produto, ordenados por nome.
-     */
-    public List<TipoProduto> listar() {
-        List<TipoProduto> lista = new ArrayList<>();
-        String sql = "SELECT id, nome FROM tipo_produto ORDER BY nome";
+    public List<Categoria> listar() {
+        List<Categoria> lista = new ArrayList<>();
+        String sql = "SELECT id, nome, descricao FROM categoria ORDER BY nome";
+
         try (Connection conn = Conexao.getConexao();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
-                TipoProduto t = new TipoProduto();
-                t.setId(rs.getInt("id"));
-                t.setNome(rs.getString("nome"));
-                lista.add(t);
+                Categoria c = new Categoria();
+                c.setId(rs.getInt("id"));
+                c.setNome(rs.getString("nome"));
+                c.setDescricao(rs.getString("descricao"));
+                lista.add(c);
             }
 
         } catch (SQLException e) {
-            System.err.println("Erro ao listar tipos: " + e.getMessage());
+            System.err.println("❌ Erro ao listar categorias: " + e.getMessage());
             e.printStackTrace();
         }
-
-        System.out.println("DEBUG: TipoProdutoDAO.listar() retornou " + lista.size() + " tipos.");
-        for (TipoProduto t : lista) System.out.println("  -> " + t.getId() + " : " + t.getNome());
         return lista;
     }
 
-
-    /**
-     * Busca um TipoProduto por ID. Retorna null se não encontrar.
-     */
-    public TipoProduto buscarPorId(int id) {
-        String sql = "SELECT id, nome FROM tipo_produto WHERE id = ?";
-
+    public Categoria buscarPorId(int id) {
+        String sql = "SELECT id, nome, descricao FROM categoria WHERE id = ?";
         try (Connection conn = Conexao.getConexao();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    TipoProduto t = new TipoProduto();
-                    t.setId(rs.getInt("id"));
-                    t.setNome(rs.getString("nome"));
-                    return t;
+                    Categoria c = new Categoria();
+                    c.setId(rs.getInt("id"));
+                    c.setNome(rs.getString("nome"));
+                    c.setDescricao(rs.getString("descricao"));
+                    return c;
                 }
             }
-
         } catch (SQLException e) {
-            System.err.println("❌ Erro ao buscar tipo por id: " + e.getMessage());
+            System.err.println("❌ Erro ao buscar categoria: " + e.getMessage());
             e.printStackTrace();
         }
         return null;
     }
 
-    /**
-     * Insere e retorna o id gerado (ou -1 em caso de falha).
-     */
-    public int inserir(TipoProduto tipo) {
-        String sql = "INSERT INTO tipo_produto (nome) VALUES (?) RETURNING id";
+    public int inserir(Categoria categoria) {
+        String sql = "INSERT INTO categoria (nome, descricao) VALUES (?, ?) RETURNING id";
         try (Connection conn = Conexao.getConexao();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setString(1, tipo.getNome());
+            ps.setString(1, categoria.getNome());
+            ps.setString(2, categoria.getDescricao());
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     int id = rs.getInt(1);
-                    tipo.setId(id);
+                    categoria.setId(id);
                     return id;
                 }
             }
-
         } catch (SQLException e) {
-            // fallback (compatibilidade) sem RETURNING
+            // fallback sem RETURNING
             try {
-                String sql2 = "INSERT INTO tipo_produto (nome) VALUES (?)";
+                String sql2 = "INSERT INTO categoria (nome, descricao) VALUES (?, ?)";
                 try (Connection conn = Conexao.getConexao();
                      PreparedStatement ps2 = conn.prepareStatement(sql2, Statement.RETURN_GENERATED_KEYS)) {
-                    ps2.setString(1, tipo.getNome());
+                    ps2.setString(1, categoria.getNome());
+                    ps2.setString(2, categoria.getDescricao());
                     int rows = ps2.executeUpdate();
                     if (rows > 0) {
                         try (ResultSet keys = ps2.getGeneratedKeys()) {
                             if (keys.next()) {
                                 int id = keys.getInt(1);
-                                tipo.setId(id);
+                                categoria.setId(id);
                                 return id;
                             }
                         }
                     }
                 }
             } catch (SQLException ex2) {
-                System.err.println("❌ Erro ao inserir tipo (fallback): " + ex2.getMessage());
+                System.err.println("❌ Erro ao inserir categoria (fallback): " + ex2.getMessage());
                 ex2.printStackTrace();
-                return -1;
             }
         }
         return -1;
     }
 
-    /**
-     * Atualiza um tipo. Retorna true se atualizou algo.
-     */
-    public boolean atualizar(TipoProduto tipo) {
-        String sql = "UPDATE tipo_produto SET nome = ? WHERE id = ?";
+    public boolean atualizar(Categoria categoria) {
+        String sql = "UPDATE categoria SET nome = ?, descricao = ? WHERE id = ?";
         try (Connection conn = Conexao.getConexao();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setString(1, tipo.getNome());
-            ps.setInt(2, tipo.getId());
+            ps.setString(1, categoria.getNome());
+            ps.setString(2, categoria.getDescricao());
+            ps.setInt(3, categoria.getId());
             return ps.executeUpdate() > 0;
-
         } catch (SQLException e) {
-            System.err.println("❌ Erro ao atualizar tipo: " + e.getMessage());
+            System.err.println("❌ Erro ao atualizar categoria: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
     }
 
-    /**
-     * Exclui um tipo por id. Retorna true se excluiu.
-     */
     public boolean excluir(int id) {
-        String sql = "DELETE FROM tipo_produto WHERE id = ?";
+        String sql = "DELETE FROM categoria WHERE id = ?";
         try (Connection conn = Conexao.getConexao();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-
             ps.setInt(1, id);
             return ps.executeUpdate() > 0;
-
         } catch (SQLException e) {
-            System.err.println("❌ Erro ao excluir tipo: " + e.getMessage());
+            System.err.println("❌ Erro ao excluir categoria: " + e.getMessage());
             e.printStackTrace();
             return false;
         }

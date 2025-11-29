@@ -1,25 +1,36 @@
 package br.edu.adega.adegamaster.model.domain;
 
 public class TipoProduto {
-    private int idTipoProduto;
+
+    private int id;
     private String nomeTipo;
 
-    // 1. Construtor Vazio
+    // Construtor padrão (obrigatório p/ frameworks, leitura de banco, etc.)
     public TipoProduto() {}
 
-    // 2. Construtor Completo
-    public TipoProduto(int idTipoProduto, String nomeTipo) {
-        this.idTipoProduto = idTipoProduto;
+    // Construtor completo
+    public TipoProduto(int id, String nomeTipo) {
+        this.id = id;
         this.nomeTipo = nomeTipo;
     }
 
-    // 3. Getters e Setters (Clique direito > Generate > Getters e Setters)
-    public int getIdTipoProduto() { return idTipoProduto; }
-    public void setIdTipoProduto(int idTipoProduto) { this.idTipoProduto = idTipoProduto; }
-    public String getNomeTipo() { return nomeTipo; }
-    public void setNomeTipo(String nomeTipo) { this.nomeTipo = nomeTipo; }
+    public int getId() {
+        return id;
+    }
 
-    // 4. Método para exibição na interface
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    // Conveniência: os sistemas geralmente pedem getNome(), não getNomeTipo()
+    public String getNome() {
+        return nomeTipo;
+    }
+
+    public void setNome(String nomeTipo) {
+        this.nomeTipo = nomeTipo;
+    }
+
     @Override
     public String toString() {
         return nomeTipo;

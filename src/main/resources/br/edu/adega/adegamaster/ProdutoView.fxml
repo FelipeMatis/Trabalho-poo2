@@ -1,1 +1,61 @@
-<TextField fx:id="txtBusca" promptText="Buscar por Nome ou Tipo..." />
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="br.edu.adega.adegamaster.controller.MainController">
+
+    <top>
+        <ToolBar>
+            <Button text="Novo" onAction="#handleNovo"/>
+            <Button text="Salvar" onAction="#handleSalvar"/>
+            <Button text="Editar" onAction="#handleEditar"/>
+            <Button text="Excluir" onAction="#handleExcluir"/>
+            <Separator />
+            <Label text="Buscar:" />
+            <TextField fx:id="txtBusca" promptText="Buscar por nome ou tipo..." onKeyReleased="#handleBuscar" />
+        </ToolBar>
+    </top>
+
+    <center>
+        <SplitPane orientation="VERTICAL">
+            <items>
+                <TableView fx:id="tableProdutos" prefHeight="300">
+                    <columns>
+                        <TableColumn fx:id="columnId" text="ID" prefWidth="60"/>
+                        <TableColumn fx:id="columnNome" text="Nome" prefWidth="220"/>
+                        <TableColumn fx:id="columnDescricao" text="Descrição" prefWidth="250"/>
+                        <TableColumn fx:id="columnPreco" text="Preço" prefWidth="100"/>
+                        <TableColumn fx:id="columnTipo" text="Tipo" prefWidth="150"/>
+                    </columns>
+                </TableView>
+
+                <AnchorPane minHeight="220" prefHeight="220">
+                    <children>
+                        <GridPane layoutX="10" layoutY="10" AnchorPane.topAnchor="10" AnchorPane.leftAnchor="10" AnchorPane.rightAnchor="10">
+                            <padding>
+                                <Insets top="10" right="10" bottom="10" left="10"/>
+                            </padding>
+                            <hgap>10</hgap>
+                            <vgap>10</vgap>
+
+                            <Label text="Nome:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                            <TextField fx:id="txtNome" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                            <Label text="Preço:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                            <TextField fx:id="txtPreco" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                            <Label text="Tipo:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                            <ComboBox fx:id="comboTipo" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+                            <Label text="Descrição:" GridPane.rowIndex="3" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
+                            <TextArea fx:id="txtDescricao" prefRowCount="3" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+                        </GridPane>
+                    </children>
+                </AnchorPane>
+            </items>
+        </SplitPane>
+    </center>
+</BorderPane>

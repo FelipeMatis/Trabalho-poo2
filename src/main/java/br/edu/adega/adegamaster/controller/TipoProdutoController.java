@@ -1,178 +1,143 @@
 package br.edu.adega.adegamaster.controller;
 
-import br.edu.adega.adegamaster.dao.ProdutoDAO;
-import br.edu.adega.adegamaster.dao.TipoProdutoDAO;
-import br.edu.adega.adegamaster.domain.Produto;
-import br.edu.adega.adegamaster.domain.TipoProduto;
+import br.edu.adega.adegamaster.model.dao.TipoProdutoDAO;
+import br.edu.adega.adegamaster.model.domain.TipoProduto;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.collections.transformation.FilteredList; // NOVO
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.PropertyValueFactory;
+
 import java.net.URL;
+import java.util.List;
+import java.util.Optional;
 import java.util.ResourceBundle;
 
-public class ProdutoController implements Initializable {
+public class TipoProdutoController implements Initializable {
 
-    @FXML private TextField txtNome;
-    @FXML private TextField txtPreco;
-    @FXML private TextArea txtDescricao;
-    @FXML private ComboBox<TipoProduto> cbTipoProduto;
-    @FXML private TableView<Produto> tableProdutos;
-    @FXML private TableColumn<Produto, Integer> colId;
-    @FXML private TableColumn<Produto, String> colNome;
-    @FXML private TableColumn<Produto, Double> colPreco;
-    @FXML private TableColumn<Produto, TipoProduto> colTipo;
+    private final TipoProdutoDAO tipoDAO = new TipoProdutoDAO();
 
-    // NOVO CAMPO PARA BUSCA
-    @FXML private TextField txtBusca;
+    @FXML private TableView<TipoProduto> tableTipos;
+    @FXML private TableColumn<TipoProduto, Integer> columnId;
+    @FXML private TableColumn<TipoProduto, String> columnNome;
+    @FXML private TextField txtNomeTipo;
 
-    private ProdutoDAO produtoDAO = new ProdutoDAO();
-    private TipoProdutoDAO tipoProdutoDAO = new TipoProdutoDAO();
-
-    private ObservableList<Produto> listaProdutos;
-    private FilteredList<Produto> listaFiltrada; // NOVO
+    private final ObservableList<TipoProduto> tiposObs = FXCollections.observableArrayList();
 
     @Override
-    public void initialize(URL url, ResourceBundle resourceBundle) {
-        colId.setCellValueFactory(new PropertyValueFactory<>("id"));
-        colNome.setCellValueFactory(new PropertyValueFactory<>("nome"));
-        colPreco.setCellValueFactory(new PropertyValueFactory<>("preco"));
-        colTipo.setCellValueFactory(new PropertyValueFactory<>("tipoProduto"));
+    public void initialize(URL location, ResourceBundle resources) {
+        // Ligando colunas com atributos do modelo
+        columnId.setCellValueFactory(new javafx.scene.control.cell.PropertyValueFactory<>("id"));
+        columnNome.setCellValueFactory(new javafx.scene.control.cell.PropertyValueFactory<>("nome"));
 
-        carregarTabelaProdutos();
-        carregarComboBoxTipos();
+        carregarTipos();
 
-        tableProdutos.getSelectionModel().selectedItemProperty().addListener(
-                (observable, oldValue, newValue) -> preencherCampos(newValue));
-
-        // NOVO: Adicionar listener para o campo de busca
-        txtBusca.textProperty().addListener((observable, oldValue, newValue) -> filtrarProdutos(newValue));
-    }
-
-    private void carregarTabelaProdutos() {
-        listaProdutos = FXCollections.observableArrayList(produtoDAO.listarTodos());
-        listaFiltrada = new FilteredList<>(listaProdutos, p -> true); // Inicializa com todos
-        tableProdutos.setItems(listaFiltrada);
-    }
-
-    // NOVO MÉTODO DE FILTRO
-    private void filtrarProdutos(String texto) {
-        String lowerCaseFilter = texto.toLowerCase();
-        listaFiltrada.setPredicate(produto -> {
-            // Se o campo de busca está vazio, exibe tudo
-            if (texto == null || texto.isEmpty()) {
-                return true;
+        // Quando selecionar na tabela, preenche o campo
+        tableTipos.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, novoVal) -> {
+            if (novoVal != null) {
+                txtNomeTipo.setText(novoVal.getNome());
+            } else {
+                txtNomeTipo.clear();
             }
-
-            // Compara o nome do produto com o texto de busca
-            if (produto.getNome().toLowerCase().contains(lowerCaseFilter)) {
-                return true;
-            }
-            // Compara o nome do tipo de produto com o texto de busca
-            if (produto.getTipoProduto() != null && produto.getTipoProduto().getNome().toLowerCase().contains(lowerCaseFilter)) {
-                return true;
-            }
-            return false; // Não houve correspondência
         });
     }
 
-
-    private void carregarComboBoxTipos() {
-        ObservableList<TipoProduto> listaTipos = FXCollections.observableArrayList(tipoProdutoDAO.listarTodos());
-        cbTipoProduto.setItems(listaTipos);
+    private void carregarTipos() {
+        List<TipoProduto> lista = tipoDAO.listar(); // confirme nome listar() no DAO
+        tiposObs.setAll(lista);
+        tableTipos.setItems(tiposObs);
     }
 
-    private void preencherCampos(Produto produto) {
-        if (produto != null) {
-            txtNome.setText(produto.getNome());
-            txtPreco.setText(String.valueOf(produto.getPreco()));
-            txtDescricao.setText(produto.getDescricao());
-            cbTipoProduto.getSelectionModel().select(produto.getTipoProduto());
-        } else {
-            limparCampos();
-        }
-    }
-
-    private void limparCampos() {
-        txtNome.clear();
-        txtPreco.clear();
-        txtDescricao.clear();
-        cbTipoProduto.getSelectionModel().clearSelection();
-        tableProdutos.getSelectionModel().clearSelection();
+    @FXML
+    private void handleNovo() {
+        txtNomeTipo.clear();
+        tableTipos.getSelectionModel().clearSelection();
     }
 
     @FXML
     private void handleSalvar() {
-        // ... (Lógica de Salvar/Atualizar, mantida) ...
-        Produto produto = new Produto();
-        try {
-            if (txtNome.getText().isEmpty() || txtPreco.getText().isEmpty() || cbTipoProduto.getSelectionModel().isEmpty()) {
-                exibirAlerta(Alert.AlertType.WARNING, "Campos Obrigatórios", "Nome, Preço e Tipo de Produto são obrigatórios.");
-                return;
-            }
+        String nome = txtNomeTipo.getText() != null ? txtNomeTipo.getText().trim() : "";
 
-            produto.setNome(txtNome.getText());
-            produto.setPreco(Double.parseDouble(txtPreco.getText()));
-            produto.setDescricao(txtDescricao.getText());
-            produto.setTipoProduto(cbTipoProduto.getSelectionModel().getSelectedItem());
-
-            Produto selecionado = tableProdutos.getSelectionModel().getSelectedItem();
-            if (selecionado != null) {
-                produto.setId(selecionado.getId());
-                produtoDAO.atualizar(produto);
-                exibirAlerta(Alert.AlertType.INFORMATION, "Sucesso", "Produto atualizado com sucesso!");
-            } else {
-                produtoDAO.inserir(produto);
-                exibirAlerta(Alert.AlertType.INFORMATION, "Sucesso", "Produto inserido com sucesso!");
-            }
-        } catch (NumberFormatException e) {
-            exibirAlerta(Alert.AlertType.ERROR, "Erro de Formato", "Preço deve ser um número válido.");
+        if (nome.isEmpty()) {
+            mostrarAlerta(Alert.AlertType.WARNING, "Validação", "O nome do tipo é obrigatório.");
+            return;
         }
 
-        carregarTabelaProdutos();
-        limparCampos();
-    }
+        TipoProduto selecionado = tableTipos.getSelectionModel().getSelectedItem();
 
-    @FXML
-    private void handleEditar() {
-        Produto selecionado = tableProdutos.getSelectionModel().getSelectedItem();
         if (selecionado == null) {
-            exibirAlerta(Alert.AlertType.WARNING, "Seleção Necessária", "Selecione um produto na tabela para editar.");
+            // Inserção
+            TipoProduto novo = new TipoProduto();
+            novo.setNome(nome);
+            try {
+                int novoId = tipoDAO.inserir(novo);
+                if (novoId > 0) {
+                    mostrarAlerta(Alert.AlertType.INFORMATION, "Sucesso", "Tipo cadastrado com sucesso!");
+                } else {
+                    mostrarAlerta(Alert.AlertType.ERROR, "Erro", "Falha ao cadastrar o tipo.");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                mostrarAlerta(Alert.AlertType.ERROR, "Erro", "Erro ao cadastrar o tipo: " + e.getMessage());
+            }
+        } else {
+            // Atualização
+            selecionado.setNome(nome);
+            try {
+                if (tipoDAO.atualizar(selecionado)) {
+                    mostrarAlerta(Alert.AlertType.INFORMATION, "Sucesso", "Tipo atualizado com sucesso!");
+                } else {
+                    mostrarAlerta(Alert.AlertType.ERROR, "Erro", "Falha ao atualizar o tipo.");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                mostrarAlerta(Alert.AlertType.ERROR, "Erro", "Erro ao atualizar o tipo: " + e.getMessage());
+            }
         }
+
+        carregarTipos();
+        handleNovo();
     }
 
     @FXML
     private void handleExcluir() {
-        Produto selecionado = tableProdutos.getSelectionModel().getSelectedItem();
-        if (selecionado != null) {
-            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle("Confirmação de Exclusão");
-            alert.setHeaderText("Tem certeza que deseja excluir " + selecionado.getNome() + "?");
+        TipoProduto selecionado = tableTipos.getSelectionModel().getSelectedItem();
 
-            if (alert.showAndWait().get() == ButtonType.OK) {
-                try {
-                    produtoDAO.excluir(selecionado.getId());
-                    exibirAlerta(Alert.AlertType.INFORMATION, "Sucesso", "Produto excluído com sucesso.");
-                    carregarTabelaProdutos();
-                    limparCampos();
-                } catch (Exception e) {
-                    exibirAlerta(Alert.AlertType.ERROR, "Erro de Exclusão", "Não foi possível excluir o produto. Verifique se ele não está em uso.");
+        if (selecionado == null) {
+            mostrarAlerta(Alert.AlertType.WARNING, "Seleção", "Selecione um tipo para excluir.");
+            return;
+        }
+
+        if (confirmar("Confirmação", "Deseja realmente excluir o tipo selecionado?")) {
+            try {
+                if (tipoDAO.excluir(selecionado.getId())) {
+                    mostrarAlerta(Alert.AlertType.INFORMATION, "Sucesso", "Tipo excluído com sucesso!");
+                    carregarTipos();
+                    handleNovo();
+                } else {
+                    mostrarAlerta(Alert.AlertType.ERROR, "Erro", "Falha ao excluir o tipo.");
                 }
+            } catch (Exception e) {
+                e.printStackTrace();
+                mostrarAlerta(Alert.AlertType.ERROR, "Erro", "Erro ao excluir o tipo: " + e.getMessage());
             }
-        } else {
-            exibirAlerta(Alert.AlertType.WARNING, "Seleção Necessária", "Selecione um produto na tabela para excluir.");
         }
     }
 
-    // MÉTODO DE ALERTA COMPARTILHADO
-    private void exibirAlerta(Alert.AlertType tipo, String titulo, String mensagem) {
+    private void mostrarAlerta(Alert.AlertType tipo, String titulo, String mensagem) {
         Alert alert = new Alert(tipo);
         alert.setTitle(titulo);
         alert.setHeaderText(null);
         alert.setContentText(mensagem);
         alert.showAndWait();
+    }
+
+    private boolean confirmar(String titulo, String mensagem) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle(titulo);
+        alert.setHeaderText(null);
+        alert.setContentText(mensagem);
+        Optional<ButtonType> result = alert.showAndWait();
+        return result.isPresent() && result.get() == ButtonType.OK;
     }
 }
