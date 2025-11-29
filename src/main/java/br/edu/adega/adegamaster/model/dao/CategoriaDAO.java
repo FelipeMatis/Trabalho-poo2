@@ -23,13 +23,15 @@ public class CategoriaDAO {
                 c.setDescricao(rs.getString("descricao"));
                 lista.add(c);
             }
-
         } catch (SQLException e) {
+            // Refatoração já aplicada pelo usuário: Propaga a exceção
             System.err.println("❌ Erro ao listar categorias: " + e.getMessage());
             e.printStackTrace();
+            throw new ExceptionDAO("Falha de persistência ao listar categorias.", e);
         }
         return lista;
     }
+
 
     public Categoria buscarPorId(int id) {
         String sql = "SELECT id, nome, descricao FROM categoria WHERE id = ?";
@@ -46,10 +48,12 @@ public class CategoriaDAO {
                 }
             }
         } catch (SQLException e) {
+            // REFATORADO: Não retorna null; lança a exceção
             System.err.println("❌ Erro ao buscar categoria: " + e.getMessage());
             e.printStackTrace();
+            throw new ExceptionDAO("Falha de persistência ao buscar categoria por ID.", e);
         }
-        return null;
+        return null; // Retorna null se não encontrar (rs.next() for false)
     }
 
     public int inserir(Categoria categoria) {
@@ -66,7 +70,7 @@ public class CategoriaDAO {
                 }
             }
         } catch (SQLException e) {
-            // fallback sem RETURNING
+            // REFATORADO: Lógica de fallback encapsulada no bloco catch principal
             try {
                 String sql2 = "INSERT INTO categoria (nome, descricao) VALUES (?, ?)";
                 try (Connection conn = Conexao.getConexao();
@@ -87,9 +91,11 @@ public class CategoriaDAO {
             } catch (SQLException ex2) {
                 System.err.println("❌ Erro ao inserir categoria (fallback): " + ex2.getMessage());
                 ex2.printStackTrace();
+                // Se o fallback falhar, lança a exceção customizada.
+                throw new ExceptionDAO("Falha de persistência ao inserir categoria.", ex2);
             }
         }
-        return -1;
+        return -1; // Retorna -1 se inserção/fallback ocorreu, mas não conseguiu o ID
     }
 
     public boolean atualizar(Categoria categoria) {
@@ -101,9 +107,10 @@ public class CategoriaDAO {
             ps.setInt(3, categoria.getId());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
+            // REFATORADO: Não retorna false; lança a exceção
             System.err.println("❌ Erro ao atualizar categoria: " + e.getMessage());
             e.printStackTrace();
-            return false;
+            throw new ExceptionDAO("Falha de persistência ao atualizar categoria.", e);
         }
     }
 
@@ -114,9 +121,10 @@ public class CategoriaDAO {
             ps.setInt(1, id);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
+            // REFATORADO: Não retorna false; lança a exceção
             System.err.println("❌ Erro ao excluir categoria: " + e.getMessage());
             e.printStackTrace();
-            return false;
+            throw new ExceptionDAO("Falha de persistência ao excluir categoria.", e);
         }
     }
 }

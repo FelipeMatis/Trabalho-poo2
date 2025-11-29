@@ -1,6 +1,7 @@
 package br.edu.adega.adegamaster.controller;
 
 import br.edu.adega.adegamaster.model.dao.CategoriaDAO;
+import br.edu.adega.adegamaster.model.dao.ExceptionDAO; // << NOVO: Importa a exceção customizada
 import br.edu.adega.adegamaster.model.dao.ProdutoDAO;
 import br.edu.adega.adegamaster.model.domain.Categoria;
 import br.edu.adega.adegamaster.model.domain.Produto;
@@ -33,7 +34,6 @@ public class MainController implements Initializable {
     @FXML private TextField txtNome;
     @FXML private TextField txtPreco;
     @FXML private TextArea txtDescricao;
-    // NOTE: mantive o fx:id "comboTipo" para evitar alteração no FXML — ele vai conter Categoria
     @FXML private ComboBox<Categoria> comboTipo;
     @FXML private TextField txtBusca;
 
@@ -41,12 +41,7 @@ public class MainController implements Initializable {
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        // IMPORTANT: verifique no seu FXML:
-        // 1) top-level fx:controller="br.edu.adega.adegamaster.controller.MainController"
-        // 2) o ComboBox tem fx:id="comboTipo"
-        // se estes não baterem, os @FXML ficarão nulos.
-
-        // Colunas - nomes dos getters do Produto (getId, getNome, getDescricao, getPreco)
+        // ... (configurações de colunas e listeners permanecem as mesmas) ...
         columnId.setCellValueFactory(new PropertyValueFactory<>("id"));
         columnNome.setCellValueFactory(new PropertyValueFactory<>("nome"));
         columnDescricao.setCellValueFactory(new PropertyValueFactory<>("descricao"));
@@ -64,18 +59,19 @@ public class MainController implements Initializable {
         // Inicializa combo e tabela com tratamento de erro
         try {
             carregarCategorias();
-        } catch (Exception e) {
+        } catch (ExceptionDAO e) { // << ATUALIZADO: Captura ExceptionDAO
             System.err.println("Erro ao carregar categorias no initialize: " + e.getMessage());
             e.printStackTrace();
             comboTipo.setItems(FXCollections.observableArrayList());
-            comboTipo.setPromptText("Erro ao carregar categorias");
+            mostrarAlerta(Alert.AlertType.ERROR, "Erro de Inicialização", "Falha ao carregar categorias: " + e.getMessage());
         }
 
         try {
             carregarTabelaProdutos();
-        } catch (Exception e) {
+        } catch (ExceptionDAO e) { // << ATUALIZADO: Captura ExceptionDAO
             System.err.println("Erro ao carregar produtos no initialize: " + e.getMessage());
             e.printStackTrace();
+            mostrarAlerta(Alert.AlertType.ERROR, "Erro de Inicialização", "Falha ao carregar produtos: " + e.getMessage());
         }
 
         // Preencher campos ao selecionar produto da tabela
@@ -85,18 +81,11 @@ public class MainController implements Initializable {
         }
     }
 
-    private void carregarCategorias() {
-        List<Categoria> lista = null;
-        try {
-            lista = categoriaDAO.listar();
-        } catch (Exception e) {
-            System.err.println("DEBUG: Erro ao chamar categoriaDAO.listar(): " + e.getMessage());
-            e.printStackTrace();
-        }
-
+    private void carregarCategorias() throws ExceptionDAO { // << NOVO: Propaga ExceptionDAO
+        List<Categoria> lista = categoriaDAO.listar();
         if (lista == null) lista = List.of();
 
-        // debug simples
+        // Debugs
         System.out.println("DEBUG: carregarCategorias() -> quantidade = " + lista.size());
         for (Categoria c : lista) {
             System.out.println("DEBUG: Categoria -> id=" + c.getId() + " nome=" + c.getNome());
@@ -105,11 +94,9 @@ public class MainController implements Initializable {
         // popula o ComboBox
         ObservableList<Categoria> obs = FXCollections.observableArrayList(lista);
         comboTipo.setItems(obs);
-
-        // Se quiser texto de ajuda quando vazio
         comboTipo.setPromptText(obs.isEmpty() ? "Nenhuma categoria cadastrada" : "Selecione a categoria...");
 
-        // Força o ComboBox a exibir o nome do objeto (independente do toString())
+        // Força o ComboBox a exibir o nome do objeto
         comboTipo.setConverter(new StringConverter<Categoria>() {
             @Override
             public String toString(Categoria categoria) {
@@ -117,7 +104,6 @@ public class MainController implements Initializable {
             }
             @Override
             public Categoria fromString(String string) {
-                // não usado aqui
                 return null;
             }
         });
@@ -129,11 +115,10 @@ public class MainController implements Initializable {
             }
         });
 
-        // limpa seleção inicial
         comboTipo.getSelectionModel().clearSelection();
     }
 
-    private void carregarTabelaProdutos() {
+    private void carregarTabelaProdutos() throws ExceptionDAO { // << NOVO: Propaga ExceptionDAO
         List<Produto> lista = produtoDAO.listar();
         if (lista == null) lista = List.of();
         System.out.println("DEBUG: carregarTabelaProdutos() -> produtos retornados = " + lista.size());
@@ -154,7 +139,7 @@ public class MainController implements Initializable {
         String nome = txtNome.getText() != null ? txtNome.getText().trim() : "";
         String precoStr = txtPreco.getText() != null ? txtPreco.getText().trim() : "";
         String descricao = txtDescricao.getText() != null ? txtDescricao.getText().trim() : "";
-        Categoria categoria = comboTipo.getValue(); // categoria selecionada
+        Categoria categoria = comboTipo.getValue();
 
         if (nome.isEmpty() || categoria == null) {
             mostrarAlerta(Alert.AlertType.WARNING, "Validação", "Nome e Categoria são obrigatórios.");
@@ -172,34 +157,41 @@ public class MainController implements Initializable {
         }
 
         Produto selecionado = tableProdutos.getSelectionModel().getSelectedItem();
-        if (selecionado == null) {
-            // inserir novo
-            Produto p = new Produto();
-            p.setNome(nome);
-            p.setPreco(preco);
-            p.setDescricao(descricao);
-            p.setCategoria(categoria);
-            // quantidade: como a UI atual não tem campo, deixamos 0 por padrão
-            p.setQuantidade(0);
-            boolean ok = produtoDAO.inserir(p);
-            if (!ok) {
-                mostrarAlerta(Alert.AlertType.ERROR, "Erro", "Falha ao cadastrar produto. Veja logs.");
-            }
-        } else {
-            // atualizar existente
-            selecionado.setNome(nome);
-            selecionado.setPreco(preco);
-            selecionado.setDescricao(descricao);
-            selecionado.setCategoria(categoria);
-            // manter quantidade atual (ou alterar se for adicionar campo)
-            boolean ok = produtoDAO.atualizar(selecionado);
-            if (!ok) {
-                mostrarAlerta(Alert.AlertType.ERROR, "Erro", "Falha ao atualizar produto. Veja logs.");
-            }
-        }
 
-        carregarTabelaProdutos();
-        limparCampos();
+        try { // << NOVO: Bloco try/catch para a ExceptionDAO
+            if (selecionado == null) {
+                // inserir novo
+                Produto p = new Produto();
+                p.setNome(nome);
+                p.setPreco(preco);
+                p.setDescricao(descricao);
+                p.setCategoria(categoria);
+                p.setQuantidade(0);
+
+                // O DAO agora lança ExceptionDAO, então não precisa checar o boolean 'ok'
+                produtoDAO.inserir(p);
+                mostrarAlerta(Alert.AlertType.INFORMATION, "Sucesso", "Produto cadastrado com sucesso!");
+
+            } else {
+                // atualizar existente
+                selecionado.setNome(nome);
+                selecionado.setPreco(preco);
+                selecionado.setDescricao(descricao);
+                selecionado.setCategoria(categoria);
+
+                // O DAO agora lança ExceptionDAO, então não precisa checar o boolean 'ok'
+                produtoDAO.atualizar(selecionado);
+                mostrarAlerta(Alert.AlertType.INFORMATION, "Sucesso", "Produto atualizado com sucesso!");
+            }
+
+            carregarTabelaProdutos();
+            limparCampos();
+
+        } catch (ExceptionDAO e) { // << NOVO: Captura a falha do DAO
+            System.err.println("Erro na operação Salvar: " + e.getMessage());
+            e.printStackTrace();
+            mostrarAlerta(Alert.AlertType.ERROR, "Erro de Persistência", e.getMessage());
+        }
     }
 
     @FXML
@@ -215,27 +207,48 @@ public class MainController implements Initializable {
     @FXML
     private void handleExcluir() {
         Produto selecionado = tableProdutos.getSelectionModel().getSelectedItem();
-        if (selecionado != null) {
-            boolean ok = confirmar("Confirmação", "Deseja realmente excluir o produto selecionado?");
-            if (ok) {
-                if (!produtoDAO.excluir(selecionado.getId())) {
-                    mostrarAlerta(Alert.AlertType.ERROR, "Erro", "Falha ao excluir produto. Veja logs.");
-                }
+        if (selecionado == null) {
+            mostrarAlerta(Alert.AlertType.WARNING, "Seleção", "Selecione um produto para excluir.");
+            return;
+        }
+
+        boolean ok = confirmar("Confirmação", "Deseja realmente excluir o produto selecionado?");
+
+        if (ok) {
+            try { // << NOVO: Bloco try/catch para a ExceptionDAO
+                // O DAO agora lança ExceptionDAO, então não precisa checar o boolean
+                produtoDAO.excluir(selecionado.getId());
+                mostrarAlerta(Alert.AlertType.INFORMATION, "Sucesso", "Produto excluído com sucesso!");
+
                 carregarTabelaProdutos();
                 limparCampos();
+
+            } catch (ExceptionDAO e) { // << NOVO: Captura a falha do DAO
+                System.err.println("Erro na operação Excluir: " + e.getMessage());
+                e.printStackTrace();
+                mostrarAlerta(Alert.AlertType.ERROR, "Erro de Persistência", e.getMessage());
             }
-        } else {
-            mostrarAlerta(Alert.AlertType.WARNING, "Seleção", "Selecione um produto para excluir.");
         }
     }
 
     @FXML
     private void handleBuscar() {
+        // ... (código de busca permanece o mesmo) ...
         String termo = txtBusca.getText() == null ? "" : txtBusca.getText().trim().toLowerCase();
-        if (termo.isEmpty()) {
-            tableProdutos.setItems(produtosObs);
-            return;
+
+        try { // << ATUALIZADO: Usamos o try/catch no handleBuscar para tratar erros no carregarTabelaProdutos
+            if (termo.isEmpty()) {
+                carregarTabelaProdutos(); // Recarrega tudo se o termo estiver vazio
+                return;
+            }
+        } catch (ExceptionDAO e) {
+            System.err.println("Erro na operação Buscar: " + e.getMessage());
+            e.printStackTrace();
+            mostrarAlerta(Alert.AlertType.ERROR, "Erro de Persistência", "Não foi possível carregar a lista de produtos.");
+            return; // Sai do método se falhar
         }
+
+        // Mantemos a lógica de filtro na lista em memória (produtosObs)
         ObservableList<Produto> filtrado = FXCollections.observableArrayList();
         for (Produto p : produtosObs) {
             boolean matchNome = p.getNome() != null && p.getNome().toLowerCase().contains(termo);

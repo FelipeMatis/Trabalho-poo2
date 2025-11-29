@@ -11,8 +11,45 @@ import java.util.List;
 
 public class ProdutoDAO {
 
+    // Nota: Estes DAOs não precisam ser instanciados aqui se forem usados apenas para a exceção.
+    // O ProdutoDAO já carrega os dados de Categoria/TipoProduto via JOIN.
     private final CategoriaDAO categoriaDAO = new CategoriaDAO();
     private final TipoProdutoDAO tipoProdutoDAO = new TipoProdutoDAO(); // caso queira usar direto
+
+    // --- Método auxiliar para mapear ResultSet para Produto (Refatoração futura - item 3.1) ---
+    // Criar este método é uma refatoração valiosa (Extract Method) para o Trabalho 3.
+    private Produto mapResultSetToProduto(ResultSet rs) throws SQLException {
+        Produto p = new Produto();
+        p.setId(rs.getInt("id"));
+        p.setNome(rs.getString("nome"));
+
+        BigDecimal preco = rs.getBigDecimal("preco");
+        p.setPreco(preco != null ? preco : BigDecimal.ZERO);
+
+        p.setQuantidade(rs.getInt("quantidade"));
+        p.setDescricao(rs.getString("descricao"));
+
+        // Mapeamento de Categoria
+        int cid = rs.getInt("categoria_id");
+        Categoria cat = null;
+        String catNome = rs.getString("categoria_nome");
+        String catDesc = rs.getString("categoria_descricao");
+        // Verifica se o ID ou Nome da categoria vieram preenchidos (significa que o JOIN funcionou)
+        if (cid > 0 && catNome != null) {
+            cat = new Categoria(cid, catNome, catDesc);
+        }
+        p.setCategoria(cat);
+
+        // Mapeamento de TipoProduto
+        int tid = rs.getInt("tipo_id");
+        String tipoNome = rs.getString("tipo_nome");
+        if (tid > 0 && tipoNome != null) {
+            TipoProduto tipo = new TipoProduto(tid, tipoNome);
+            // p.setTipoProduto(tipo); // Requer que a classe Produto tenha este campo.
+        }
+        return p;
+    }
+    // ------------------------------------------------------------------------------------------
 
     /**
      * Lista todos os produtos — traz também categoria e tipo (se existirem).
@@ -34,42 +71,16 @@ public class ProdutoDAO {
              ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
-                Produto p = new Produto();
-                p.setId(rs.getInt("id"));
-                p.setNome(rs.getString("nome"));
-
-                BigDecimal preco = rs.getBigDecimal("preco");
-                p.setPreco(preco != null ? preco : BigDecimal.ZERO);
-
-                p.setQuantidade(rs.getInt("quantidade"));
-                p.setDescricao(rs.getString("descricao"));
-
-                // Categoria (pode ser null)
-                int cid = rs.getInt("categoria_id");
-                Categoria cat = null;
-                String catNome = rs.getString("categoria_nome");
-                String catDesc = rs.getString("categoria_descricao");
-                if (!rs.wasNull() && catNome != null) {
-                    cat = new Categoria(cid, catNome, catDesc);
-                }
-                p.setCategoria(cat);
-
-                // TipoProduto (opcional)
-                int tid = rs.getInt("tipo_id");
-                TipoProduto tipo = null;
-                String tipoNome = rs.getString("tipo_nome");
-                if (!rs.wasNull() && tipoNome != null) {
-                    tipo = new TipoProduto(tid, tipoNome);
-                }
-                // Se quiser guardar tipo no Produto, adicione campo e setter no Produto.
-                // Ex: p.setTipoProduto(tipo);
-
+                // Código de mapeamento transferido para o método auxiliar (mapResultSetToProduto)
+                Produto p = mapResultSetToProduto(rs);
                 produtos.add(p);
             }
 
         } catch (SQLException e) {
+            // REFATORADO: Lança a exceção customizada
             System.err.println("❌ Erro ao listar produtos: " + e.getMessage());
             e.printStackTrace();
+            throw new ExceptionDAO("Falha de persistência ao listar produtos.", e);
         }
 
         return produtos;
@@ -94,39 +105,16 @@ public class ProdutoDAO {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    Produto p = new Produto();
-                    p.setId(rs.getInt("id"));
-                    p.setNome(rs.getString("nome"));
-
-                    BigDecimal preco = rs.getBigDecimal("preco");
-                    p.setPreco(preco != null ? preco : BigDecimal.ZERO);
-
-                    p.setQuantidade(rs.getInt("quantidade"));
-                    p.setDescricao(rs.getString("descricao"));
-
-                    int cid = rs.getInt("categoria_id");
-                    Categoria cat = null;
-                    String catNome = rs.getString("categoria_nome");
-                    String catDesc = rs.getString("categoria_descricao");
-                    if (!rs.wasNull() && catNome != null) {
-                        cat = new Categoria(cid, catNome, catDesc);
-                    }
-                    p.setCategoria(cat);
-
-                    int tid = rs.getInt("tipo_id");
-                    String tipoNome = rs.getString("tipo_nome");
-                    if (!rs.wasNull() && tipoNome != null) {
-                        TipoProduto tipo = new TipoProduto(tid, tipoNome);
-                        // p.setTipoProduto(tipo); // se Produto tiver campo tipoProduto
-                    }
-
-                    return p;
+                    // Código de mapeamento transferido para o método auxiliar (mapResultSetToProduto)
+                    return mapResultSetToProduto(rs);
                 }
             }
 
         } catch (SQLException e) {
+            // REFATORADO: Lança a exceção customizada
             System.err.println("❌ Erro ao buscar produto por ID: " + e.getMessage());
             e.printStackTrace();
+            throw new ExceptionDAO("Falha de persistência ao buscar produto por ID.", e);
         }
 
         return null;
@@ -134,7 +122,6 @@ public class ProdutoDAO {
 
     /**
      * Insere produto. Usa RETURNING id (Postgres).
-     * IMPORTANTE: categoria_id é NOT NULL no seu schema — então sempre passe uma categoria válida.
      */
     public boolean inserir(Produto produto) {
         String sql =
@@ -152,20 +139,17 @@ public class ProdutoDAO {
 
             ps.setInt(3, produto.getQuantidade());
 
-            // categoria é obrigatório -> use id da categoria; se null, lançar erro ou usar default
             Categoria cat = produto.getCategoria();
             if (cat != null && cat.getId() > 0) {
                 ps.setInt(4, cat.getId());
             } else {
-                // Se você tem categoria default com id=1, pode usar:
-                ps.setInt(4, 1);
+                ps.setInt(4, 1); // default
             }
 
             ps.setString(5, produto.getDescricao());
 
             // tipo_id opcional
-            // se Produto tiver tipoProduto, use produto.getTipoProduto().getId()
-            ps.setNull(6, Types.INTEGER); // por padrão null (altere se tiver tipo)
+            ps.setNull(6, Types.INTEGER);
 
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -175,8 +159,10 @@ public class ProdutoDAO {
             }
 
         } catch (SQLException e) {
+            // REFATORADO: Lança a exceção customizada
             System.err.println("❌ Erro ao inserir produto: " + e.getMessage());
             e.printStackTrace();
+            throw new ExceptionDAO("Falha de persistência ao inserir produto.", e);
         }
 
         return false;
@@ -213,9 +199,10 @@ public class ProdutoDAO {
             return ps.executeUpdate() > 0;
 
         } catch (SQLException e) {
+            // REFATORADO: Lança a exceção customizada
             System.err.println("❌ Erro ao atualizar produto: " + e.getMessage());
             e.printStackTrace();
-            return false;
+            throw new ExceptionDAO("Falha de persistência ao atualizar produto.", e);
         }
     }
 
@@ -232,9 +219,10 @@ public class ProdutoDAO {
             return ps.executeUpdate() > 0;
 
         } catch (SQLException e) {
+            // REFATORADO: Lança a exceção customizada
             System.err.println("❌ Erro ao excluir produto: " + e.getMessage());
             e.printStackTrace();
-            return false;
+            throw new ExceptionDAO("Falha de persistência ao excluir produto.", e);
         }
     }
 }

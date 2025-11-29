@@ -1,5 +1,6 @@
 package br.edu.adega.adegamaster.controller;
 
+import br.edu.adega.adegamaster.model.dao.ExceptionDAO; // << NOVO: Importa a exceção customizada
 import br.edu.adega.adegamaster.model.dao.TipoProdutoDAO;
 import br.edu.adega.adegamaster.model.domain.TipoProduto;
 import javafx.collections.FXCollections;
@@ -30,7 +31,13 @@ public class TipoProdutoController implements Initializable {
         columnId.setCellValueFactory(new javafx.scene.control.cell.PropertyValueFactory<>("id"));
         columnNome.setCellValueFactory(new javafx.scene.control.cell.PropertyValueFactory<>("nome"));
 
-        carregarTipos();
+        try { // << NOVO: Tenta carregar tipos na inicialização
+            carregarTipos();
+        } catch (ExceptionDAO e) {
+            System.err.println("Erro ao carregar tipos na inicialização: " + e.getMessage());
+            e.printStackTrace();
+            mostrarAlerta(Alert.AlertType.ERROR, "Erro de Inicialização", "Falha ao carregar Tipos de Produto: " + e.getMessage());
+        }
 
         // Quando selecionar na tabela, preenche o campo
         tableTipos.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, novoVal) -> {
@@ -42,8 +49,8 @@ public class TipoProdutoController implements Initializable {
         });
     }
 
-    private void carregarTipos() {
-        List<TipoProduto> lista = tipoDAO.listar(); // confirme nome listar() no DAO
+    private void carregarTipos() throws ExceptionDAO { // << NOVO: Propaga ExceptionDAO
+        List<TipoProduto> lista = tipoDAO.listar();
         tiposObs.setAll(lista);
         tableTipos.setItems(tiposObs);
     }
@@ -52,6 +59,7 @@ public class TipoProdutoController implements Initializable {
     private void handleNovo() {
         txtNomeTipo.clear();
         tableTipos.getSelectionModel().clearSelection();
+        txtNomeTipo.requestFocus(); // << BÔNUS: Reforça a usabilidade (foco no campo)
     }
 
     @FXML
@@ -65,38 +73,34 @@ public class TipoProdutoController implements Initializable {
 
         TipoProduto selecionado = tableTipos.getSelectionModel().getSelectedItem();
 
-        if (selecionado == null) {
-            // Inserção
-            TipoProduto novo = new TipoProduto();
-            novo.setNome(nome);
-            try {
-                int novoId = tipoDAO.inserir(novo);
-                if (novoId > 0) {
-                    mostrarAlerta(Alert.AlertType.INFORMATION, "Sucesso", "Tipo cadastrado com sucesso!");
-                } else {
-                    mostrarAlerta(Alert.AlertType.ERROR, "Erro", "Falha ao cadastrar o tipo.");
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                mostrarAlerta(Alert.AlertType.ERROR, "Erro", "Erro ao cadastrar o tipo: " + e.getMessage());
-            }
-        } else {
-            // Atualização
-            selecionado.setNome(nome);
-            try {
-                if (tipoDAO.atualizar(selecionado)) {
-                    mostrarAlerta(Alert.AlertType.INFORMATION, "Sucesso", "Tipo atualizado com sucesso!");
-                } else {
-                    mostrarAlerta(Alert.AlertType.ERROR, "Erro", "Falha ao atualizar o tipo.");
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                mostrarAlerta(Alert.AlertType.ERROR, "Erro", "Erro ao atualizar o tipo: " + e.getMessage());
-            }
-        }
+        try { // << NOVO: Bloco try/catch para a ExceptionDAO
+            if (selecionado == null) {
+                // Inserção
+                TipoProduto novo = new TipoProduto();
+                novo.setNome(nome);
 
-        carregarTipos();
-        handleNovo();
+                // Não precisa checar novoId > 0; o DAO lança ExceptionDAO em caso de falha crítica
+                tipoDAO.inserir(novo);
+                mostrarAlerta(Alert.AlertType.INFORMATION, "Sucesso", "Tipo cadastrado com sucesso!");
+
+            } else {
+                // Atualização
+                selecionado.setNome(nome);
+
+                // Não precisa checar o boolean; o DAO lança ExceptionDAO em caso de falha crítica
+                tipoDAO.atualizar(selecionado);
+                mostrarAlerta(Alert.AlertType.INFORMATION, "Sucesso", "Tipo atualizado com sucesso!");
+            }
+
+            carregarTipos();
+            handleNovo();
+
+        } catch (ExceptionDAO e) { // << NOVO: Captura a falha do DAO
+            System.err.println("Erro na operação Salvar Tipo: " + e.getMessage());
+            e.printStackTrace();
+            // Mostra o alerta de erro usando a mensagem específica lançada pelo DAO
+            mostrarAlerta(Alert.AlertType.ERROR, "Erro de Persistência", e.getMessage());
+        }
     }
 
     @FXML
@@ -109,17 +113,18 @@ public class TipoProdutoController implements Initializable {
         }
 
         if (confirmar("Confirmação", "Deseja realmente excluir o tipo selecionado?")) {
-            try {
-                if (tipoDAO.excluir(selecionado.getId())) {
-                    mostrarAlerta(Alert.AlertType.INFORMATION, "Sucesso", "Tipo excluído com sucesso!");
-                    carregarTipos();
-                    handleNovo();
-                } else {
-                    mostrarAlerta(Alert.AlertType.ERROR, "Erro", "Falha ao excluir o tipo.");
-                }
-            } catch (Exception e) {
+            try { // << NOVO: Bloco try/catch para a ExceptionDAO
+                // Não precisa checar o boolean; o DAO lança ExceptionDAO em caso de falha crítica
+                tipoDAO.excluir(selecionado.getId());
+                mostrarAlerta(Alert.AlertType.INFORMATION, "Sucesso", "Tipo excluído com sucesso!");
+
+                carregarTipos();
+                handleNovo();
+
+            } catch (ExceptionDAO e) { // << NOVO: Captura a falha do DAO
+                System.err.println("Erro na operação Excluir Tipo: " + e.getMessage());
                 e.printStackTrace();
-                mostrarAlerta(Alert.AlertType.ERROR, "Erro", "Erro ao excluir o tipo: " + e.getMessage());
+                mostrarAlerta(Alert.AlertType.ERROR, "Erro de Persistência", e.getMessage());
             }
         }
     }

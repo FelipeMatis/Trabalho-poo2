@@ -26,8 +26,10 @@ public class TipoProdutoDAO {
             }
 
         } catch (SQLException e) {
-            System.err.println("Erro ao listar tipos: " + e.getMessage());
+            // REFATORADO: Lança a exceção customizada
+            System.err.println("❌ Erro ao listar tipos: " + e.getMessage());
             e.printStackTrace();
+            throw new ExceptionDAO("Falha de persistência ao listar Tipos de Produto.", e);
         }
 
         System.out.println("DEBUG: TipoProdutoDAO.listar() retornou " + lista.size() + " tipos.");
@@ -56,14 +58,16 @@ public class TipoProdutoDAO {
             }
 
         } catch (SQLException e) {
+            // REFATORADO: Lança a exceção customizada
             System.err.println("❌ Erro ao buscar tipo por id: " + e.getMessage());
             e.printStackTrace();
+            throw new ExceptionDAO("Falha de persistência ao buscar Tipo de Produto por ID.", e);
         }
         return null;
     }
 
     /**
-     * Insere e retorna o id gerado (ou -1 em caso de falha).
+     * Insere e retorna o id gerado (ou lança exceção em caso de falha).
      */
     public int inserir(TipoProduto tipo) {
         String sql = "INSERT INTO tipo_produto (nome) VALUES (?) RETURNING id";
@@ -80,7 +84,7 @@ public class TipoProdutoDAO {
             }
 
         } catch (SQLException e) {
-            // fallback (compatibilidade) sem RETURNING
+            // REFATORADO: Lógica de fallback encapsulada para garantir que o erro final seja ExceptionDAO
             try {
                 String sql2 = "INSERT INTO tipo_produto (nome) VALUES (?)";
                 try (Connection conn = Conexao.getConexao();
@@ -100,10 +104,11 @@ public class TipoProdutoDAO {
             } catch (SQLException ex2) {
                 System.err.println("❌ Erro ao inserir tipo (fallback): " + ex2.getMessage());
                 ex2.printStackTrace();
-                return -1;
+                // Se o fallback falhar, lança a exceção customizada.
+                throw new ExceptionDAO("Falha de persistência ao inserir Tipo de Produto.", ex2);
             }
         }
-        return -1;
+        return -1; // Retorna -1 se a inserção/fallback ocorreu, mas não conseguiu o ID
     }
 
     /**
@@ -119,9 +124,10 @@ public class TipoProdutoDAO {
             return ps.executeUpdate() > 0;
 
         } catch (SQLException e) {
+            // REFATORADO: Não retorna false; lança a exceção
             System.err.println("❌ Erro ao atualizar tipo: " + e.getMessage());
             e.printStackTrace();
-            return false;
+            throw new ExceptionDAO("Falha de persistência ao atualizar Tipo de Produto.", e);
         }
     }
 
@@ -137,9 +143,10 @@ public class TipoProdutoDAO {
             return ps.executeUpdate() > 0;
 
         } catch (SQLException e) {
+            // REFATORADO: Não retorna false; lança a exceção
             System.err.println("❌ Erro ao excluir tipo: " + e.getMessage());
             e.printStackTrace();
-            return false;
+            throw new ExceptionDAO("Falha de persistência ao excluir Tipo de Produto.", e);
         }
     }
 }

@@ -1,18 +1,18 @@
 package br.edu.adega.adegamaster.model.dao;
 
+import com.zaxxer.hikari.HikariConfig; // Importar HikariConfig
+import com.zaxxer.hikari.HikariDataSource; // Importar HikariDataSource
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.Properties;
+// Não precisa mais de java.sql.DriverManager
+// Não precisa mais de java.util.Properties
 
 /**
- * Conexão com PostgreSQL.
- * - Lê variáveis de ambiente primeiro (recomendado)
- * - Se não existir, usa valores padrão codificados (substitua).
+ * Conexão com PostgreSQL utilizando HikariCP (Connection Pool).
  */
 public class Conexao {
 
-    // ----- VALORES PADRÃO (substitua se quiser) -----
+    // ----- VALORES PADRÃO (MANTIDOS) -----
     private static final String DEFAULT_HOST = "localhost";
     private static final String DEFAULT_PORT = "5432";
     private static final String DEFAULT_DB   = "AdegaMaster";
@@ -20,13 +20,23 @@ public class Conexao {
     private static final String DEFAULT_PASS = "postgres";
     // ------------------------------------------------
 
-    // Nome da variável de ambiente (ex.: set no SO / IntelliJ run config)
+    // Nomes das variáveis de ambiente
     private static final String ENV_HOST = "DB_HOST";
     private static final String ENV_PORT = "DB_PORT";
     private static final String ENV_DB   = "DB_NAME";
     private static final String ENV_USER = "DB_USER";
     private static final String ENV_PASS = "DB_PASS";
-    private static final String ENV_SSLMODE = "DB_SSLMODE"; // opcional: require, disable, prefer, etc.
+    private static final String ENV_SSLMODE = "DB_SSLMODE";
+
+    // NOVO: Fonte de dados (o pool de conexões)
+    private static HikariDataSource dataSource;
+
+    /**
+     * Bloco estático: Inicializa o pool de conexões assim que a classe é carregada.
+     */
+    static {
+        initPool();
+    }
 
     private static String getEnvOrDefault(String envName, String defaultValue) {
         String v = System.getenv(envName);
@@ -37,7 +47,7 @@ public class Conexao {
         String host = getEnvOrDefault(ENV_HOST, DEFAULT_HOST);
         String port = getEnvOrDefault(ENV_PORT, DEFAULT_PORT);
         String db   = getEnvOrDefault(ENV_DB, DEFAULT_DB);
-        String sslmode = System.getenv(ENV_SSLMODE); // null ok
+        String sslmode = System.getenv(ENV_SSLMODE);
 
         String url = String.format("jdbc:postgresql://%s:%s/%s", host, port, db);
         if (sslmode != null && !sslmode.isBlank()) {
@@ -46,42 +56,51 @@ public class Conexao {
         return url;
     }
 
-    /**
-     * Retorna uma conexão com o banco.
-     * Lê credenciais das variáveis de ambiente (DB_USER, DB_PASS) ou usa defaults.
-     */
-    public static Connection getConexao() throws SQLException {
-        String url = buildUrl();
-        String user = getEnvOrDefault(ENV_USER, DEFAULT_USER);
-        String pass = getEnvOrDefault(ENV_PASS, DEFAULT_PASS);
+    private static void initPool() {
+        try {
+            HikariConfig config = new HikariConfig();
 
-        // Se quiser passar propriedades adicionais:
-        // Properties props = new Properties();
-        // props.setProperty("user", user);
-        // props.setProperty("password", pass);
-        // props.setProperty("loginTimeout", "10");
-        // return DriverManager.getConnection(url, props);
+            // Configurações herdadas dos seus métodos
+            config.setJdbcUrl(buildUrl());
+            config.setUsername(getEnvOrDefault(ENV_USER, DEFAULT_USER));
+            config.setPassword(getEnvOrDefault(ENV_PASS, DEFAULT_PASS));
 
-        return DriverManager.getConnection(url, user, pass);
+            // Configurações do HikariCP (essenciais para PostgreSQL)
+            config.setDriverClassName("org.postgresql.Driver");
+            config.setMaximumPoolSize(10); // Quantas conexões o pool pode manter no máximo
+            config.setMinimumIdle(5);      // Quantas conexões o pool tenta manter ociosas
+            config.setConnectionTimeout(3000); // 3 segundos para obter uma conexão antes de falhar
+
+            dataSource = new HikariDataSource(config);
+            System.out.println("DEBUG: HikariCP - Pool de conexões inicializado com sucesso.");
+
+        } catch (Exception e) {
+            System.err.println("FATAL: Falha ao inicializar o HikariCP (Pool de Conexões).");
+            e.printStackTrace();
+            // Lançar uma RuntimeException se o pool não puder ser iniciado.
+            throw new RuntimeException("Não foi possível iniciar o pool de conexões.", e);
+        }
     }
 
     /**
-     * Teste rápido — execute este main para validar a conexão.
-     * Para testes locais é recomendado exportar as variáveis de ambiente:
-     *   Windows (cmd): set DB_HOST=localhost
-     *   Linux/Mac: export DB_HOST=localhost
-     *
-     * Ou configure no Run Configuration do IntelliJ.
+     * Retorna uma conexão REUTILIZÁVEL do pool.
+     * @throws SQLException Se o pool não conseguir fornecer uma conexão.
      */
+    public static Connection getConexao() throws SQLException {
+        // Isso retorna uma conexão pronta do pool. O try-with-resources nos DAOs a devolverá automaticamente.
+        return dataSource.getConnection();
+    }
+
+    // O método main de teste pode ser mantido e usará o novo getConexao()
+
     public static void main(String[] args) {
-        System.out.println("URL = " + buildUrl()); // útil para debug (não exponha em produção)
+        System.out.println("URL = " + buildUrl());
         try (Connection c = getConexao()) {
             System.out.println("Conexão OK -> " + c.getMetaData().getDatabaseProductName()
                     + " " + c.getMetaData().getDatabaseProductVersion());
         } catch (SQLException e) {
             System.err.println("Falha na conexão: " + e.getMessage());
             e.printStackTrace();
-            // dicas rápidas:
             System.err.println("Dicas: verifique URL, usuário/senha e se o Postgres está rodando na porta correta.");
         }
     }
