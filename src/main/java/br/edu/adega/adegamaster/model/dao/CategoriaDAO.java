@@ -24,7 +24,7 @@ public class CategoriaDAO {
                 lista.add(c);
             }
         } catch (SQLException e) {
-            // Refatoração já aplicada pelo usuário: Propaga a exceção
+            // Refatoração : Propaga a exceção
             System.err.println("❌ Erro ao listar categorias: " + e.getMessage());
             e.printStackTrace();
             throw new ExceptionDAO("Falha de persistência ao listar categorias.", e);

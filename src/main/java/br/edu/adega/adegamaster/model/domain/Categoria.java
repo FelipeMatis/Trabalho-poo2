@@ -26,6 +26,6 @@ public class Categoria {
 
     @Override
     public String toString() {
-        return nome; // útil para ComboBox
+        return nome;
     }
 }

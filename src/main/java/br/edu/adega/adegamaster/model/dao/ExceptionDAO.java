@@ -1,4 +1,4 @@
-package br.edu.adega.adegamaster.model.dao; // Ou o pacote adequado
+package br.edu.adega.adegamaster.model.dao;
 
 /**
  * Exceção customizada para erros na camada de acesso a dados (DAO).

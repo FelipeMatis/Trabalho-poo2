@@ -2,7 +2,7 @@ package br.edu.adega.adegamaster.model.dao;
 
 import br.edu.adega.adegamaster.model.domain.Categoria;
 import br.edu.adega.adegamaster.model.domain.Produto;
-// O import do TipoProduto foi removido.
+
 
 import java.math.BigDecimal;
 import java.sql.*;
@@ -12,11 +12,7 @@ import java.util.List;
 public class ProdutoDAO {
 
     private final CategoriaDAO categoriaDAO = new CategoriaDAO();
-    // A instância do TipoProdutoDAO foi removida.
 
-
-    // --- Método auxiliar para mapear ResultSet para Produto ---
-    // Este método é agora 100% focado no Produto e Categoria.
     private Produto mapResultSetToProduto(ResultSet rs) throws SQLException {
         Produto p = new Produto();
         p.setId(rs.getInt("id"));
@@ -28,7 +24,6 @@ public class ProdutoDAO {
         p.setQuantidade(rs.getInt("quantidade"));
         p.setDescricao(rs.getString("descricao"));
 
-        // Mapeamento de Categoria
         int cid = rs.getInt("categoria_id");
         Categoria cat = null;
         String catNome = rs.getString("categoria_nome");
@@ -39,7 +34,6 @@ public class ProdutoDAO {
         }
         p.setCategoria(cat);
 
-        // O Mapeamento de TipoProduto (tid, tipoNome) FOI REMOVIDO.
         return p;
     }
     // ------------------------------------------------------------------------------------------
@@ -85,7 +79,6 @@ public class ProdutoDAO {
                         "       c.nome AS categoria_nome, c.descricao AS categoria_descricao " +
                         "FROM produto p " +
                         "LEFT JOIN categoria c ON p.categoria_id = c.id " +
-                        // A cláusula LEFT JOIN tipo_produto t ON p.tipo_id = t.id FOI REMOVIDA.
                         "WHERE p.id = ?";
 
         try (Connection conn = Conexao.getConexao();
@@ -107,14 +100,10 @@ public class ProdutoDAO {
         return null;
     }
 
-    /**
-     * Insere produto. Usa RETURNING id (Postgres).
-     */
     public boolean inserir(Produto produto) {
         String sql =
                 "INSERT INTO produto (nome, preco, quantidade, categoria_id, descricao) " +
                         "VALUES (?, ?, ?, ?, ?) RETURNING id";
-        // A coluna 'tipo_id' foi removida do INSERT.
 
         try (Connection conn = Conexao.getConexao();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -135,8 +124,6 @@ public class ProdutoDAO {
             }
 
             ps.setString(5, produto.getDescricao());
-
-            // ps.setNull(6, Types.INTEGER); - O parâmetro de tipo_id foi removido.
 
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -159,7 +146,6 @@ public class ProdutoDAO {
      */
     public boolean atualizar(Produto produto) {
         String sql = "UPDATE produto SET nome = ?, preco = ?, quantidade = ?, categoria_id = ?, descricao = ? WHERE id = ?";
-        // A coluna 'tipo_id' foi removida do UPDATE.
 
         try (Connection conn = Conexao.getConexao();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -177,8 +163,6 @@ public class ProdutoDAO {
             else ps.setInt(4, 1); // default
 
             ps.setString(5, produto.getDescricao());
-
-            // ps.setNull(6, Types.INTEGER); - O parâmetro de tipo_id foi removido.
 
             ps.setInt(6, produto.getId()); // O ID agora é o parâmetro 6
 

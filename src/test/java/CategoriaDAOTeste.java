@@ -15,7 +15,6 @@ public class CategoriaDAOTeste {
         novaCategoria.setNome("Teste JUnit");
         novaCategoria.setDescricao("Categoria criada para teste de unidade.");
 
-        // CORRIGIDO: Declarar e inicializar fora do bloco try
         int idRetornado = -1;
 
         try {
@@ -40,7 +39,6 @@ public class CategoriaDAOTeste {
     }
     @Test
     void testBuscarPorId_IdInexistente_DeveRetornarNull() {
-        // ARRANGE (Preparar)
         // Usamos um ID que é garantido ser inválido ou não usado (como -1 ou um número muito alto).
         final int ID_INEXISTENTE = -999;
 
@@ -59,12 +57,10 @@ public class CategoriaDAOTeste {
             // Se a ExceptionDAO for lançada, o teste falha. A busca não deve lançar exceção se não encontrar nada.
             Assertions.fail("O teste falhou devido a uma exceção de persistência inesperada: " + e.getMessage());
         }
-        // CLEANUP: Não é necessário, pois nenhum dado foi criado.
     }
 
     @Test
     void testAtualizar_NomeAlterado_DeveRefletirNoBanco() {
-        // ARRANGE (Preparar)
         Categoria categoriaOriginal = new Categoria();
         categoriaOriginal.setNome("Nome Antigo");
         categoriaOriginal.setDescricao("Descrição Original");

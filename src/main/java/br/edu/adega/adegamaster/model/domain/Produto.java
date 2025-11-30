@@ -9,7 +9,7 @@ public class Produto {
     private BigDecimal preco;
     private int quantidade;
     private String descricao;
-    private Categoria categoria;   // agora é objeto Categoria
+    private Categoria categoria;
 
     public Produto() {}
 
