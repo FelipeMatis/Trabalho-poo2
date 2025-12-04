@@ -30,7 +30,6 @@ public class CategoriaDAOTeste {
             // Se a ExceptionDAO for lançada (erro de banco), o teste falha
             Assertions.fail("O teste falhou devido a uma exceção de persistência: " + e.getMessage());
         } finally {
-            // CLEANUP (Limpar)
             // O método excluir será chamado apenas se idRetornado for > 0
             if (idRetornado > 0) {
                 categoriaDAO.excluir(idRetornado);
@@ -45,13 +44,11 @@ public class CategoriaDAOTeste {
         Categoria categoriaBuscada;
 
         try {
-            // ACT (Executar Busca)
             // 1. Tenta buscar uma categoria que não existe no banco.
             categoriaBuscada = categoriaDAO.buscarPorId(ID_INEXISTENTE);
 
-            // ASSERT (Verificar)
             // 2. O objeto retornado deve ser nulo.
-            Assertions.assertNull(categoriaBuscada, "Buscar por um ID que não existe deve retornar null.");
+            Assertions.assertNull(categoriaBuscada, "Buscazr por um ID que não existe deve retornar null.");
 
         } catch (ExceptionDAO e) {
             // Se a ExceptionDAO for lançada, o teste falha. A busca não deve lançar exceção se não encontrar nada.
@@ -99,7 +96,7 @@ public class CategoriaDAOTeste {
     }
     @Test
     void testExcluir_CategoriaExistente_DeveRetornarTrueECategoriaNaoDeveSerEncontrada() {
-        // ARRANGE (Preparar)
+
         Categoria categoriaParaExcluir = new Categoria();
         categoriaParaExcluir.setNome("Exclusao Teste");
 
@@ -127,11 +124,9 @@ public class CategoriaDAOTeste {
             Assertions.fail("O teste falhou devido a uma exceção de persistência: " + e.getMessage());
         } finally {
             // CLEANUP (Limpar)
-            // O cleanup tenta excluir novamente por segurança, caso a exclusão no ACT tenha falhado.
             if (!sucessoExclusao && idParaExcluir > 0) {
                 categoriaDAO.excluir(idParaExcluir);
             }
         }
     }
-
 }

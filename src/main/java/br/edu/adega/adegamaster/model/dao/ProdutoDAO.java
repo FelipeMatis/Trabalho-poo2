@@ -36,7 +36,6 @@ public class ProdutoDAO {
 
         return p;
     }
-    // ------------------------------------------------------------------------------------------
 
     /**
      * Lista todos os produtos — traz categoria.
@@ -49,7 +48,6 @@ public class ProdutoDAO {
                         "       c.nome AS categoria_nome, c.descricao AS categoria_descricao " +
                         "FROM produto p " +
                         "LEFT JOIN categoria c ON p.categoria_id = c.id " +
-                        // A cláusula LEFT JOIN tipo_produto t ON p.tipo_id = t.id FOI REMOVIDA.
                         "ORDER BY p.nome";
 
         try (Connection conn = Conexao.getConexao();
